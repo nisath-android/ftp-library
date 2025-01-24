@@ -22,4 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FTPClient"
 include(":app")
-include(":ftpclient")
+//include(":ftpclient")
