@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "SelectFiles"
+
 class SelectFiles(private val context: Context) {
 
     fun chooseFiles(onIntentReady: (Intent) -> Unit) {
@@ -40,40 +41,32 @@ class SelectFiles(private val context: Context) {
         getFilePath: (Uri) -> String?,
         ftpUtil: FTPUtil,
         getURL: (String) -> Unit
-    ): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                if (server.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty()) {
-                    val filePath = getFilePath(selectedFileUri)
-                    if (filePath != null) {
-                        if (ftpUtil.connect(server, 21, username, password)) {
-                            // Determine file type and extension
-                            val (fileType, fileExtension) = getFileTypeAndExt(context, filePath, selectedFileUri)
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            validateCredentials(server, username, password)
 
-                         //   val (fileType, fileExtension) = getFileTypeAndExtension(context, filePath, selectedFileUri)
-                            val remoteFilePath = if (filePath.contains(":")) {
-                                "${fileType}_${filePath.split(":")[1]}$fileExtension"
-                            } else {
-                                "${fileType}_unknown$fileExtension"
-                            }
+            val filePath = getFilePath(selectedFileUri)
+                ?: throw IllegalArgumentException("File path is null or invalid")
 
-                            val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath)
-                            ftpUtil.disconnect()
-                            getURL(ftpUtil.makeFtpUrl(
-                                username,
-                                password,
-                                server,
-                                filePath = remoteFilePath
-                            ))
-                            return@withContext uploaded
-                        }
-                    }
-                }
-                false
-            } catch (e: Exception) {
-                Log.e("SelectFiles", "Error uploading files: ${e.message}")
-                false
+            if (!ftpUtil.connect(server, 21, username, password)) {
+                throw IllegalStateException("Unable to connect to FTP server")
             }
+
+            val (fileType, fileExtension) = getFileTypeAndExt(context, filePath, selectedFileUri)
+            val remoteFilePath = createRemoteFilePath(filePath, fileType, fileExtension)
+
+            val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath)
+            ftpUtil.disconnect()
+
+            if (uploaded) {
+                val ftpUrl = ftpUtil.makeFtpUrl(username, password, server, filePath=remoteFilePath)
+                getURL(ftpUrl)
+            }
+
+            uploaded
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading files: ${e.message}", e)
+            false
         }
     }
 
@@ -84,33 +77,53 @@ class SelectFiles(private val context: Context) {
         password: String,
         ftpUtil: FTPUtil,
         onDownloadComplete: (Boolean) -> Unit
-    ) {
-        withContext(Dispatchers.IO) {
-            try {
-                val localDirectoryPath = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
-                    ?: context.filesDir.absolutePath
-                val localFileName = file.name
-                val remoteFilePath = file.name
+    ) = withContext(Dispatchers.IO) {
+        try {
+            validateCredentials(server, username, password)
 
-                if (ftpUtil.connect(server, 21, username, password)) {
-                    val downloadSuccess = ftpUtil.downloadFile(remoteFilePath, localDirectoryPath, localFileName)
-                    ftpUtil.disconnect()
-                    withContext(Dispatchers.Main) {
-                        onDownloadComplete(downloadSuccess)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onDownloadComplete(false)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("SelectFiles", "Error downloading files: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    onDownloadComplete(false)
-                }
+            val localDirectoryPath = getDownloadDirectoryPath()
+            val localFileName = file.name
+
+            if (!ftpUtil.connect(server, 21, username, password)) {
+                throw IllegalStateException("Unable to connect to FTP server")
+            }
+
+            val downloadSuccess = ftpUtil.downloadFile(file.name, localDirectoryPath, localFileName)
+            ftpUtil.disconnect()
+
+            withContext(Dispatchers.Main) {
+                onDownloadComplete(downloadSuccess)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error downloading files: ${e.message}", e)
+            withContext(Dispatchers.Main) {
+                onDownloadComplete(false)
             }
         }
     }
+
+    // Utility function to validate FTP credentials
+    private fun validateCredentials(server: String, username: String, password: String) {
+        if (server.isEmpty() || username.isEmpty() || password.isEmpty()) {
+            throw IllegalArgumentException("FTP credentials are incomplete")
+        }
+    }
+
+    // Utility function to create a remote file path
+    private fun createRemoteFilePath(filePath: String, fileType: String, fileExtension: String): String {
+        return if (filePath.contains(":")) {
+            "${fileType}_${filePath.split(":")[1]}$fileExtension"
+        } else {
+            if(filePath.contains("/"))
+                filePath.substringAfterLast("/").substringBeforeLast(".")
+            else
+                "${fileType}_unknown$fileExtension"
+        }
+    }
+
+    // Utility function to get the directory path for downloads
+    private fun getDownloadDirectoryPath(): String {
+        return context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
+            ?: context.filesDir.absolutePath
+    }
 }
-
-
