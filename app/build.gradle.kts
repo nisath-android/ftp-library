@@ -2,6 +2,8 @@ plugins {
   alias(libs.plugins.android.application)
   //  id("com.android.library")
     alias(libs.plugins.kotlin.android)
+    //id("kotlin-kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -38,6 +40,11 @@ android {
         buildConfig = true
         viewBinding = true
     }
+    /*sourceSets {
+        getByName("main") {
+            java.srcDirs("build/generated/ksp/main/kotlin")
+        }
+    }*/
 }
 
 dependencies {
@@ -48,7 +55,11 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
    implementation(project(":ftpclient"))
-   // implementation ("com.github.nisath-android:ftp-library:1.0.4")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+  //  kapt("com.github.bumptech.glide:compiler:4.15.1")
+    ksp("androidx.room:room-compiler:2.5.0")
+    implementation ("com.google.android.exoplayer:exoplayer:2.19.1")
+    // implementation ("com.github.nisath-android:ftp-library:1.0.4")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -47,6 +47,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- FileProvider Declaration -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.ftpclient.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="androidx.core.content.FILE_PROVIDER_PATHS"
+                android:resource= "@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>
