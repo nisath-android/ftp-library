@@ -160,10 +160,9 @@ class SelectFiles(private val context: Context) {
             remoteFilePath,
             localFile.name,
             "*/*"
-        ) { status, ctx, uri, mimetype ->
+        ) { status, _, uri, mimetype ->
             withContext(Dispatchers.Main) {
-                    onDownloadComplete(true, context, uri, mimetype)
-
+                    onDownloadComplete(status, context, uri, mimetype)
             }
         }
 

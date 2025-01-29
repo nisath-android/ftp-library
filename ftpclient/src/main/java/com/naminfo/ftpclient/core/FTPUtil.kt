@@ -188,8 +188,6 @@ class FTPUtil {
     }
 
 
-
-
    suspend fun downloadFileFromFtpAndSave(
         context: Context,
         ftpHost: String,
@@ -250,7 +248,7 @@ class FTPUtil {
    }
 
     // Function to save a file to the public Downloads directory
-   suspend fun saveFileToPublicStorage(context: Context, fileName: String, data: ByteArray, mimeType: String): Uri? {
+   private suspend fun saveFileToPublicStorage(context: Context, fileName: String, data: ByteArray, mimeType: String): Uri? {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, mimeType)

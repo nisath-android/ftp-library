@@ -1,4 +1,5 @@
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -6,13 +7,16 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.channels.FileChannel
@@ -146,5 +150,164 @@ object FileUtils {
             }
         }
         return "*/*" // Default MIME type for unknown extensions
+    }
+
+
+
+
+    data class FileInfo(
+        val name: String?,
+        val path: String?,
+        val extension: String?
+    )
+
+    fun getFileInfo(context: Context, uri: Uri): FileInfo {
+        val fileName = getFileName(context, uri)
+        val filePath = getFilePath(context, uri)
+        val fileExtension = getFileExtension(context, uri, fileName)
+        return FileInfo(fileName, filePath, fileExtension)
+    }
+
+    private fun getFileName(context: Context, uri: Uri): String? {
+        var fileName: String? = null
+        if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0) { // ✅ Check if column exists before accessing
+                        fileName = it.getString(nameIndex)
+                    } else {
+                        fileName = uri.lastPathSegment // Fallback to URI last segment
+                    }
+                }
+            }
+        } else if (uri.scheme == ContentResolver.SCHEME_FILE) {
+            fileName = File(uri.path!!).name
+        }
+        return fileName
+    }
+
+    // Get File Extension
+    private fun getFileExtension(context: Context, uri: Uri, fileName: String?): String? {
+        // First, try to extract extension from the file name
+        val extensionFromName = fileName?.substringAfterLast(".", "")
+        if (!extensionFromName.isNullOrEmpty()) {
+            return extensionFromName
+        }
+
+        // Fallback: Use MIME type to guess the extension
+        val mimeType = context.contentResolver.getType(uri)
+        return MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+    }
+    private fun getFilePath(context: Context, uri: Uri): String? {
+        return when (uri.scheme) {
+            ContentResolver.SCHEME_CONTENT -> {
+                when (uri.authority) {
+                    MediaStore.AUTHORITY -> getMediaStorePath(context, uri)
+                    "com.android.externalstorage.documents" -> handleExternalStorageDocument(uri)
+                    "com.android.providers.downloads.documents" -> handleDownloadsDocument(context, uri)
+                    "com.android.providers.media.documents" -> handleMediaDocument(context, uri)
+                    else -> copyFileToCache(context, uri)
+                }
+            }
+            ContentResolver.SCHEME_FILE -> uri.path
+            else -> null
+        }
+    }
+
+    private fun handleMediaDocument(context: Context, uri: Uri): String? {
+        val docId = DocumentsContract.getDocumentId(uri)
+        val split = docId.split(":")
+        val type = split[0]
+
+        val contentUri = when (type) {
+            "image" -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            "video" -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            "audio" -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            "file" -> MediaStore.Files.getContentUri("external") // Handle documents
+            else -> return null
+        }
+
+        val selection = "_id=?"
+        val selectionArgs = arrayOf(split[1])
+        return getDataColumn(context, contentUri, selection, selectionArgs)
+    }
+
+    private fun handleDownloadsDocument(context: Context, uri: Uri): String? {
+        val id = DocumentsContract.getDocumentId(uri)
+        val contentUri = Uri.parse("content://downloads/public_downloads")
+        return try {
+            getDataColumn(context, ContentUris.withAppendedId(contentUri, id.toLong()), null, null)
+        } catch (e: Exception) {
+            copyFileToCache(context, uri)
+        }
+    }
+
+
+// --- Helper Methods for File Path Extraction ---
+
+    // Handle MediaStore URIs (Images, Videos, Audio)
+    private fun getMediaStorePath(context: Context, uri: Uri): String? {
+        val projection = arrayOf(MediaStore.MediaColumns.DATA)
+        var cursor: Cursor? = null
+        try {
+            cursor = context.contentResolver.query(uri, projection, null, null, null)
+            cursor?.moveToFirst()
+            return cursor?.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA))
+        } finally {
+            cursor?.close()
+        }
+    }
+
+    // Handle URIs from ExternalStorageProvider
+    private fun handleExternalStorageDocument(uri: Uri): String? {
+        val docId = DocumentsContract.getDocumentId(uri)
+        val split = docId.split(":")
+        val type = split[0]
+        if ("primary".equals(type, ignoreCase = true)) {
+            return File(
+                File.separator + "storage" + File.separator + "emulated" +
+                        File.separator + "0" + File.separator + split[1]
+            ).absolutePath
+        }
+        return null
+    }
+
+
+
+    // Copy file to app cache and return its path (for URIs that don't expose a direct path)
+    private fun copyFileToCache(context: Context, uri: Uri): String? {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val fileName = getFileName(context, uri) ?: "file_${System.currentTimeMillis()}"
+        val file = File(context.cacheDir, fileName)
+        try {
+            FileOutputStream(file).use { output ->
+                inputStream.copyTo(output)
+                return file.absolutePath
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    // Generic method to query a data column from a URI
+    private fun getDataColumn(
+        context: Context,
+        uri: Uri,
+        selection: String?,
+        selectionArgs: Array<String>?
+    ): String? {
+        val column = MediaStore.MediaColumns.DATA
+        val projection = arrayOf(column)
+        var cursor: Cursor? = null
+        try {
+            cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, null)
+            cursor?.moveToFirst()
+            return cursor?.getString(cursor.getColumnIndexOrThrow(column))
+        } finally {
+            cursor?.close()
+        }
     }
 }
