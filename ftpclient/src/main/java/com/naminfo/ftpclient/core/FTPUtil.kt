@@ -1,6 +1,6 @@
 package com.naminfo.ftpclient.core
 
-import FileUtils.saveFileToPublicStorage
+import FTPFileUtils.saveFileToPublicStorage
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent

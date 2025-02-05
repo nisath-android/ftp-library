@@ -1,7 +1,7 @@
 package com.naminfo.ftpclient.core
 
-import FileUtils
-import FileUtils.getFileTypeAndExt
+import FTPFileUtils
+import FTPFileUtils.getFileTypeAndExt
 import android.content.Context
 import android.content.Intent
 import android.net.Uri

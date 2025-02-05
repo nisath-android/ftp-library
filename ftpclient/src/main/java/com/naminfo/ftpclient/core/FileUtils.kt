@@ -22,7 +22,7 @@ import java.io.OutputStream
 import java.nio.channels.FileChannel
 
 private const val TAG = "FileUtils"
-object FileUtils {
+object FTPFileUtils {
 
     fun saveFileToPublicStorage(context: Context, fileName: String, data: ByteArray, mimeType: String) {
         val contentValues = ContentValues().apply {
@@ -212,7 +212,7 @@ object FileUtils {
                 }
             }
             ContentResolver.SCHEME_FILE -> uri.path
-            else -> null
+            else -> getPath(context,uri)
         }
     }
 
