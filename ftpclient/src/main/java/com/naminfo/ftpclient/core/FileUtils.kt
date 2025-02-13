@@ -310,4 +310,103 @@ object FTPFileUtils {
             cursor?.close()
         }
     }
+
+
+
+
+
+// ✅--- Helper Methods for File Path Extraction ---
+
+    fun getFileExtensionNew(context: Context,uri: Uri): String? {
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(uri)
+        return mimeType?.let {
+            MimeTypeMap.getSingleton().getExtensionFromMimeType(it)
+        }
+    }
+
+    fun inferExtension(context: Context,uri: Uri): String {
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(uri)
+
+        return when {
+            mimeType == null -> "unknown"
+
+            mimeType.startsWith("image/") -> {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: when (mimeType) {
+                    "image/jpeg" -> "jpg"
+                    "image/png" -> "png"
+                    "image/gif" -> "gif"
+                    "image/webp" -> "webp"
+                    "image/bmp" -> "bmp"
+                    "image/tiff" -> "tiff"
+                    else -> "jpg" // Default fallback
+                }
+            }
+
+            mimeType.startsWith("video/") -> {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: when (mimeType) {
+                    "video/mp4" -> "mp4"
+                    "video/x-msvideo" -> "avi"
+                    "video/x-matroska" -> "mkv"
+                    "video/webm" -> "webm"
+                    "video/3gpp" -> "3gp"
+                    else -> "mp4" // Default fallback
+                }
+            }
+
+            mimeType.startsWith("audio/") -> {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: when (mimeType) {
+                    "audio/mpeg" -> "mp3"
+                    "audio/x-wav" -> "wav"
+                    "audio/ogg" -> "ogg"
+                    "audio/amr" -> "amr"
+                    "audio/flac" -> "flac"
+                    else -> "m4a" // Default fallback
+                }
+            }
+
+            else -> "unknown"
+        }
+    }
+    // ✅
+    fun ensureUriHasExtension(context: Context, uri: Uri): Uri {
+        return if (!uriHasExtension(uri)) {
+            getUriWithExtension(context, uri) // Function to append extension
+        } else {
+            uri
+        }
+    }
+
+    // ✅ Check if the URI contains an extension
+    fun uriHasExtension(uri: Uri): Boolean {
+        val lastPathSegment = uri.lastPathSegment ?: return false
+
+        // Extract potential extension
+        val extension = lastPathSegment.substringAfterLast('.', "")
+
+        // Check if it's a valid file extension
+        return extension.isNotEmpty() && MimeTypeMap.getSingleton().hasExtension(extension)
+    }
+
+    // ✅ Append the correct extension to the URI
+    fun getUriWithExtension(context: Context, uri: Uri): Uri {
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(uri)
+
+        // Get extension from MIME type
+        val extension =
+            MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: inferExtension(context,
+                uri
+            )
+
+        // Append the extension to the URI
+        val newUriString = "$uri.$extension"
+
+        return Uri.parse(newUriString)
+    }
+    fun formatFileName(input: String): String {
+        // Use regular expression to replace commas, spaces, and other unwanted characters with underscores
+        return  input.replace(Regex("[,\\s]"), "_")
+    }
 }

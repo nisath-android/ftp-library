@@ -46,6 +46,8 @@ class SelectFiles(private val context: Context) {
         username: String,
         password: String,
         selectedFileUri: Uri,
+        modifyRemotePath:(String,String,String)->Pair<String,String>,
+        isRemotePathModified:Boolean,
         getFilePath: (Uri) -> String?,
         ftpUtil: FTPUtil,
         getURL: (String) -> Unit
@@ -64,15 +66,19 @@ class SelectFiles(private val context: Context) {
                 TAG,
                 "uploadFiles: fileType =$fileType ,fileExtension =$fileExtension filePath =$filePath"
             )
-            val remoteFilePath = createRemoteFilePath(filePath, fileType, fileExtension)
+            var remoteFilePath:Pair<String,String> = createRemoteFilePath(filePath, fileType, fileExtension)
+            if (isRemotePathModified){
+                remoteFilePath = modifyRemotePath(remoteFilePath.first,fileType,remoteFilePath.second)
+            }
 
-            Log.d(TAG, "uploadFiles:remoteFilePath =$remoteFilePath")
-            val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath)
+
+            Log.d(TAG, "uploadFiles:remoteFilePath =${remoteFilePath.first}, ext=${remoteFilePath.first} ")
+            val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath.first)
 
 
             if (uploaded) {
                 val ftpUrl =
-                    ftpUtil.makeFtpUrl(username, password, server, filePath = remoteFilePath)
+                    ftpUtil.makeFtpUrl(username, password, server, filePath = remoteFilePath.first)
                 getURL(ftpUrl)
             }
             ftpUtil.disconnect()
@@ -177,13 +183,13 @@ class SelectFiles(private val context: Context) {
     }
 
     // Utility function to create a remote file path
-    private fun createRemoteFilePath(
+     fun createRemoteFilePath(
         filePath: String,
         fileType: String,
         fileExtension: String
-    ): String {
+    ): Pair<String,String> {
         return if (filePath.contains(":")) {
-            "${fileType}_${filePath.split(":")[1]}$fileExtension"
+            Pair("${fileType}_${filePath.split(":")[1]}$fileExtension",fileExtension)
         } else {
             if (filePath.contains("/")) {
                 Log.d(
@@ -192,10 +198,11 @@ class SelectFiles(private val context: Context) {
                         filePath.substringAfterLast("/").substringBeforeLast(".")
                     }"
                 )
-                filePath.substringAfterLast("/").substringBeforeLast(".")
+                Pair(filePath.substringAfterLast("/").substringBeforeLast("."),filePath.substringAfterLast("/").substringAfterLast("."))
             } else {
                 Log.d(TAG, "createRemoteFilePath: else = ${fileType}_unknown$fileExtension}")
                 "${fileType}_unknown$fileExtension"
+                Pair(filePath.substringAfterLast("/").substringBeforeLast("."),filePath.substringAfterLast("/").substringAfterLast("."))
             }
         }
     }

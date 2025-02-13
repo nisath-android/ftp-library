@@ -18,6 +18,7 @@ class PermissionManager(private val context: Context) {
         android.Manifest.permission.USE_FULL_SCREEN_INTENT,
         android.Manifest.permission.VIBRATE,
         android.Manifest.permission.READ_EXTERNAL_STORAGE,
+        android.Manifest.permission.MANAGE_DOCUMENTS,
         android.Manifest.permission.READ_MEDIA_IMAGES,
         android.Manifest.permission.READ_MEDIA_VIDEO,
         android.Manifest.permission.READ_MEDIA_AUDIO,
