@@ -319,6 +319,10 @@ class FTPUtil {
         filePath: String = "" // Path to file or directory
     ): String {
         return if (username.isNotEmpty() && password.isNotEmpty()) {
+            Log.d(
+                TAG,
+                "makeFtpUrl() called with: username = $username, password = $password, server = $server, port = $port, filePath = $filePath"
+            )
             "ftp://$username:$password->$server:$port/$filePath".trimEnd('/')
         } else {
             "ftp://$server:$port/$filePath".trimEnd('/')

@@ -47,7 +47,7 @@ class SelectFiles(private val context: Context) {
         password: String,
         selectedFileUri: Uri,
         modifyRemotePath:(String,String,String)->Pair<String,String>,
-        isRemotePathModified:Boolean,
+        isRemotePathModified:Boolean=false,
         getFilePath: (Uri) -> String?,
         ftpUtil: FTPUtil,
         getURL: (String) -> Unit
@@ -72,7 +72,7 @@ class SelectFiles(private val context: Context) {
             }
 
 
-            Log.d(TAG, "uploadFiles:remoteFilePath =${remoteFilePath.first}, ext=${remoteFilePath.first} ")
+            Log.d(TAG, "uploadFiles:remoteFilePath =${remoteFilePath.first}, ext=${remoteFilePath.second} ")
             val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath.first)
 
 
@@ -189,6 +189,7 @@ class SelectFiles(private val context: Context) {
         fileExtension: String
     ): Pair<String,String> {
         return if (filePath.contains(":")) {
+            Log.d(TAG, "createRemoteFilePath:contains colon: is => ${fileType}_${filePath.split(":")[1]}$fileExtension")
             Pair("${fileType}_${filePath.split(":")[1]}$fileExtension",fileExtension)
         } else {
             if (filePath.contains("/")) {

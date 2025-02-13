@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
                     lifecycleScope.launch {
                         if (selectFiles.uploadFiles(server, username, password, selectedFileUri!!,
                                 ftpUtil = ftpUtil,
-                                isRemotePathModified = true,
+                                isRemotePathModified = false,
                                 modifyRemotePath = { path,filetype, ext ->
                                     selectFiles.createRemoteFilePath(path, filetype, ext)
                                 },
