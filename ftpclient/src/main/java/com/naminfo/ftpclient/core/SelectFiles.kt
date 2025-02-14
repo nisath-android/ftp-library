@@ -46,11 +46,12 @@ class SelectFiles(private val context: Context) {
         username: String,
         password: String,
         selectedFileUri: Uri,
-        modifyRemotePath:(String,String,String)->Pair<String,String>,
-        isRemotePathModified:Boolean=false,
+        modifyRemotePath: (String, String, String) -> Pair<String, String>,
+        isRemotePathModified: Boolean = false,
         getFilePath: (Uri) -> String?,
         ftpUtil: FTPUtil,
-        getURL: (String) -> Unit
+        getURL: (String) -> Unit,
+        error: (String) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             validateCredentials(server, username, password)
@@ -66,19 +67,29 @@ class SelectFiles(private val context: Context) {
                 TAG,
                 "uploadFiles: fileType =$fileType ,fileExtension =$fileExtension filePath =$filePath"
             )
-            var remoteFilePath:Pair<String,String> = createRemoteFilePath(filePath, fileType, fileExtension)
-            if (isRemotePathModified){
-                remoteFilePath = modifyRemotePath(remoteFilePath.first,fileType,remoteFilePath.second)
+            var remoteFilePath: Pair<String, String> =
+                createRemoteFilePath(filePath, fileType, fileExtension)
+            if (isRemotePathModified) {
+                remoteFilePath =
+                    modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second)
             }
 
+            val newRemotePath = if (!hasValidExtension(remoteFilePath.first)) {
+                "${remoteFilePath.first}.$fileExtension"
+            } else {
+                remoteFilePath.first
+            }
+            Log.d(
+                TAG,
+                "uploadFiles:remoteFilePath =${newRemotePath}, ext=${remoteFilePath.second} "
+            )
 
-            Log.d(TAG, "uploadFiles:remoteFilePath =${remoteFilePath.first}, ext=${remoteFilePath.second} ")
-            val uploaded = ftpUtil.uploadFile(filePath, remoteFilePath.first)
+            val uploaded = ftpUtil.uploadFile(filePath, newRemotePath)
 
 
             if (uploaded) {
                 val ftpUrl =
-                    ftpUtil.makeFtpUrl(username, password, server, filePath = remoteFilePath.first)
+                    ftpUtil.makeFtpUrl(username, password, server, filePath = newRemotePath)
                 getURL(ftpUrl)
             }
             ftpUtil.disconnect()
@@ -87,6 +98,65 @@ class SelectFiles(private val context: Context) {
             Log.e(TAG, "Error uploading files: ${e.message}", e)
             false
         }
+    }
+
+
+    // Function to check if a file has a valid extension
+    fun hasValidExtension(filePath: String): Boolean {
+        val validExtensions = listOf(
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".tiff",
+            ".webp",
+            ".svg",
+            ".ico",
+            ".heic",
+            ".raw",
+            ".mp3",
+            ".wav",
+            ".aac",
+            ".flac",
+            ".ogg",
+            ".wma",
+            ".m4a",
+            ".aiff",
+            ".mid",
+            ".midi",
+            ".amr",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".txt",
+            ".rtf",
+            ".odt",
+            ".ods",
+            ".odp",
+            ".csv",
+            ".html",
+            ".htm",
+            ".xml",
+            ".epub",
+            ".mobi",
+            ".mp4",
+            ".avi",
+            ".mkv",
+            ".mov",
+            ".wmv",
+            ".flv",
+            ".webm",
+            ".mpeg",
+            ".mpg",
+            ".3gp",
+            ".vob"
+        )
+        return validExtensions.any { filePath.endsWith(it, ignoreCase = false) }
     }
 
     suspend fun downloadFiles(
@@ -168,7 +238,7 @@ class SelectFiles(private val context: Context) {
             "*/*"
         ) { status, _, uri, mimetype ->
             withContext(Dispatchers.Main) {
-                    onDownloadComplete(status, context, uri, mimetype)
+                onDownloadComplete(status, context, uri, mimetype)
             }
         }
 
@@ -183,14 +253,17 @@ class SelectFiles(private val context: Context) {
     }
 
     // Utility function to create a remote file path
-     fun createRemoteFilePath(
+    fun createRemoteFilePath(
         filePath: String,
         fileType: String,
         fileExtension: String
-    ): Pair<String,String> {
+    ): Pair<String, String> {
         return if (filePath.contains(":")) {
-            Log.d(TAG, "createRemoteFilePath:contains colon: is => ${fileType}_${filePath.split(":")[1]}$fileExtension")
-            Pair("${fileType}_${filePath.split(":")[1]}$fileExtension",fileExtension)
+            Log.d(
+                TAG,
+                "createRemoteFilePath:contains colon: is => ${fileType}_${filePath.split(":")[1]}$fileExtension"
+            )
+            Pair("${fileType}_${filePath.split(":")[1]}$fileExtension", fileExtension)
         } else {
             if (filePath.contains("/")) {
                 Log.d(
@@ -199,11 +272,17 @@ class SelectFiles(private val context: Context) {
                         filePath.substringAfterLast("/").substringBeforeLast(".")
                     }"
                 )
-                Pair(filePath.substringAfterLast("/").substringBeforeLast("."),filePath.substringAfterLast("/").substringAfterLast("."))
+                Pair(
+                    filePath.substringAfterLast("/").substringBeforeLast("."),
+                    filePath.substringAfterLast("/").substringAfterLast(".")
+                )
             } else {
                 Log.d(TAG, "createRemoteFilePath: else = ${fileType}_unknown$fileExtension}")
                 "${fileType}_unknown$fileExtension"
-                Pair(filePath.substringAfterLast("/").substringBeforeLast("."),filePath.substringAfterLast("/").substringAfterLast("."))
+                Pair(
+                    filePath.substringAfterLast("/").substringBeforeLast("."),
+                    filePath.substringAfterLast("/").substringAfterLast(".")
+                )
             }
         }
     }
