@@ -98,6 +98,8 @@ class MainActivity : AppCompatActivity() {
                                         getFilePathFromUri(uri)
                                     }, getURL = {
                                         Log.d(TAG, "uiInit: uploaded url is $it")
+                                    }, error = {
+
                                     })
                             ) Toast.makeText(
                                 this@MainActivity,
@@ -124,6 +126,8 @@ class MainActivity : AppCompatActivity() {
                                 }, getURL = {
                                     Log.d(TAG, "uiInit: uploaded url is $it")
                                     ftpURL = it
+                                }, error = {
+
                                 })
                         ) Toast.makeText(
                             this@MainActivity,
