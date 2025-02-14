@@ -72,16 +72,17 @@ class SelectFiles(private val context: Context) {
             if (isRemotePathModified) {
                 remoteFilePath =
                     modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second)
+                Log.d(TAG, "uploadFiles: RemotePathModified = $remoteFilePath")
             }
 
             val newRemotePath = if (!hasValidExtension(remoteFilePath.first)) {
-                "${remoteFilePath.first}.$fileExtension"
+                "${remoteFilePath.first}$fileExtension".trim()
             } else {
-                remoteFilePath.first
+                remoteFilePath.first.trim()
             }
             Log.d(
                 TAG,
-                "uploadFiles:remoteFilePath =${newRemotePath}, ext=${remoteFilePath.second} "
+                "uploadFiles:remoteFilePath =${newRemotePath}, remoteFilePath.first =${remoteFilePath.first} ext=${remoteFilePath.second} "
             )
 
             val uploaded = ftpUtil.uploadFile(filePath, newRemotePath)
