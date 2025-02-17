@@ -58,7 +58,7 @@ class FTPUtil {
                     return@withContext false
                 }
 
-                val remoteDir = "$sender/$receiver/$fileType"
+                val remoteDir = "$sender/$receiver"
                 ensureDirectories(remoteDir)
                 val remotePath = "$remoteDir/${remoteFilePath}"
                 Log.d(TAG, "uploadFile: localFile.name:${localFile.name} ,remotePath:$remotePath , remoteDir:$remoteDir")
@@ -213,7 +213,7 @@ class FTPUtil {
         return withContext(Dispatchers.IO) {
             val ftpClient = FTPClient()
             try {
-                val remotePath = "$sender/$receiver/$fileType/$remoteFilePath"
+                val remotePath = "$sender/$receiver/$remoteFilePath"
                 Log.d(
                     TAG,
                     "downloadFileFromFtpAndSave() called with:  ftpHost = $ftpHost, ftpPort = $ftpPort, username = $username, password = $password, sender = $sender, receiver = $receiver, remoteFilePath = $remoteFilePath, remotePath =$remotePath , fileName = $fileName, fileType = $fileType, mimeType = $mimeType"

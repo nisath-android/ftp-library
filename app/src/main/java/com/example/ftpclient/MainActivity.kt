@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
                 } else if (selectedFileUri != null) {
                     lifecycleScope.launch {
                         if (selectFiles.uploadFiles(server, username, password,
-                                senderName = "222",
+                                    senderName = "222",
                                 receiverName = "2232",
                                 selectedFileUri!!,
                                 ftpUtil = ftpUtil,
