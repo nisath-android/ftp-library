@@ -405,7 +405,7 @@ object FTPFileUtils {
 
         return Uri.parse(newUriString)
     }
-    fun formatFileName(input: String): String {
+        fun formatFileName(input: String): String {
         // Use regular expression to replace commas, spaces, and other unwanted characters with underscores
         return  input.replace(Regex("[,\\s]"), "_")
     }

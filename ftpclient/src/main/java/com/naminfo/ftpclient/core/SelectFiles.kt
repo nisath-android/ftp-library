@@ -45,6 +45,8 @@ class SelectFiles(private val context: Context) {
         server: String,
         username: String,
         password: String,
+        senderName:String,
+        receiverName:String,
         selectedFileUri: Uri,
         modifyRemotePath: (String, String, String) -> Pair<String, String>,
         isRemotePathModified: Boolean = false,
@@ -72,7 +74,7 @@ class SelectFiles(private val context: Context) {
             if (isRemotePathModified) {
                 remoteFilePath =
                     modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second)
-                Log.d(TAG, "uploadFiles: RemotePathModified = $remoteFilePath")
+                Log.d(TAG, "uploadFiles: RemotePathModified = ${remoteFilePath.first}")
             }
 
             val newRemotePath = if (!hasValidExtension(remoteFilePath.first)) {
@@ -85,7 +87,14 @@ class SelectFiles(private val context: Context) {
                 "uploadFiles:remoteFilePath =${newRemotePath}, remoteFilePath.first =${remoteFilePath.first} ext=${remoteFilePath.second} "
             )
 
-            val uploaded = ftpUtil.uploadFile(filePath, newRemotePath)
+            val uploaded = ftpUtil.uploadFile(
+                localFilePath = filePath,
+                remoteFilePath=newRemotePath,
+                sender = senderName,
+                receiver = receiverName,
+                fileType = getFileCategory(newRemotePath)?:fileType,
+                mimeType = "*/*"
+                )
 
 
             if (uploaded) {
@@ -160,44 +169,35 @@ class SelectFiles(private val context: Context) {
         return validExtensions.any { filePath.endsWith(it, ignoreCase = false) }
     }
 
-    suspend fun downloadFiles(
-        file: FileItem,
-        server: String,
-        username: String,
-        password: String,
-        ftpUtil: FTPUtil,
-        onDownloadComplete: (Boolean) -> Unit
-    ) = withContext(Dispatchers.IO) {
-        try {
-            validateCredentials(server, username, password)
+    fun getFileCategory(filePath: String): String {
+        val imageExtensions = listOf(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico", ".heic", ".raw")
+        val audioExtensions = listOf(".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a", ".aiff", ".mid", ".midi", ".amr")
+        val videoExtensions = listOf(".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".3gp", ".vob")
+        val documentExtensions = listOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".html", ".htm", ".xml", ".epub", ".mobi")
 
-            val localDirectoryPath = getDownloadDirectoryPath()
-            val localFileName = file.name
+        val extension = filePath.substringAfterLast('.', "").lowercase()
 
-            if (!ftpUtil.connect(server, 21, username, password)) {
-                throw IllegalStateException("Unable to connect to FTP server")
-            }
-
-            val downloadSuccess = ftpUtil.downloadFile(file.name, localDirectoryPath, localFileName)
-            ftpUtil.disconnect()
-
-            withContext(Dispatchers.Main) {
-                onDownloadComplete(downloadSuccess)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error downloading files: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                onDownloadComplete(false)
-            }
+        return when {
+            imageExtensions.contains(".$extension") -> "Image"
+            audioExtensions.contains(".$extension") -> "Audio"
+            videoExtensions.contains(".$extension") -> "Video"
+            documentExtensions.contains(".$extension") -> "Document"
+            else -> "Other"
         }
     }
+
+
+
 
     suspend fun downloadFileViaFtpURL(
         ftpUrl: String,
         localFilePath: String,
         ftpUtil: FTPUtil,
+        sender: String, receiver: String,
+
         onDownloadComplete: (Boolean, Context, Uri?, String) -> Unit
     ) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "downloadFileViaFtpURL: ftpUtil=$ftpUtil ,ftpUrl=$ftpUrl")
         // Parse the FTP URL
         val urlParts = ftpUrl.substring(6).split("->")
         val credentials = urlParts[0].split(":")
@@ -230,12 +230,15 @@ class SelectFiles(private val context: Context) {
 
         ftpUtil.downloadFileFromFtpAndSave(
             context,
-            host,
-            port,
-            username,
-            password,
-            remoteFilePath,
-            localFile.name,
+            ftpHost= host,
+           ftpPort =  port,
+           username =  username,
+           password =  password,
+            sender = sender,
+            receiver = receiver,
+           remoteFilePath =  remoteFilePath,
+           fileName =  localFile.name,
+            fileType = getFileCategory(remoteFilePath),
             "*/*"
         ) { status, _, uri, mimetype ->
             withContext(Dispatchers.Main) {

@@ -88,7 +88,9 @@ class MainActivity : AppCompatActivity() {
                     for (uri in selectedFileUris) {
                         // val filePath = uri?.let { u -> FileUtils.getPath(this, u) }
                         lifecycleScope.launch {
-                            if (selectFiles.uploadFiles(server, username, password, uri,
+                            if (selectFiles.uploadFiles(server, username, password,
+                                    senderName = "222",
+                                    receiverName = "2232", uri,
                                     ftpUtil = ftpUtil,
                                     isRemotePathModified = true,
                                     modifyRemotePath = { path,filetype, ext ->
@@ -115,7 +117,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else if (selectedFileUri != null) {
                     lifecycleScope.launch {
-                        if (selectFiles.uploadFiles(server, username, password, selectedFileUri!!,
+                        if (selectFiles.uploadFiles(server, username, password,
+                                senderName = "222",
+                                receiverName = "2232",
+                                selectedFileUri!!,
                                 ftpUtil = ftpUtil,
                                 isRemotePathModified = false,
                                 modifyRemotePath = { path,filetype, ext ->
@@ -153,7 +158,9 @@ class MainActivity : AppCompatActivity() {
                     selectFiles.downloadFileViaFtpURL(
                         ftpURL,
                         selectFiles.getDownloadDirectoryPath(),
-                        ftpUtil
+                        ftpUtil,
+                        sender = "222",
+                        receiver = "2232"
                     ) { status, ctx, savedFileUri, mimetype ->
                         if (status) {
                             Log.d(TAG, "Download successful")
