@@ -93,8 +93,8 @@ class MainActivity : AppCompatActivity() {
                                     receiverName = "2232", uri,
                                     ftpUtil = ftpUtil,
                                     isRemotePathModified = true,
-                                    modifyRemotePath = { path,filetype, ext ->
-                                        selectFiles.createRemoteFilePath(path, filetype, ext)
+                                    modifyRemotePath = { path,filetype, ext,_,_ ->
+                                        selectFiles.createRemoteFilePath(path, filetype, ext,"","")
                                     },
                                     getFilePath = { uri ->
                                         getFilePathFromUri(uri)
@@ -123,8 +123,8 @@ class MainActivity : AppCompatActivity() {
                                 selectedFileUri!!,
                                 ftpUtil = ftpUtil,
                                 isRemotePathModified = false,
-                                modifyRemotePath = { path,filetype, ext ->
-                                    selectFiles.createRemoteFilePath(path, filetype, ext)
+                                modifyRemotePath = { path,filetype, ext,_,_ ->
+                                    selectFiles.createRemoteFilePath(path, filetype, ext,"","")
                                 },
                                 getFilePath = { uri ->
                                     getFilePathFromUri(uri)

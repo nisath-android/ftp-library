@@ -1,14 +1,11 @@
 package com.naminfo.ftpclient.core
 
-import FTPFileUtils
 import FTPFileUtils.getFileTypeAndExt
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import android.widget.Toast
-import com.naminfo.ftpclient.core.model.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -55,6 +52,10 @@ class SelectFiles(private val context: Context) {
         getURL: (String) -> Unit,
         error: (String) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
+        Log.d(
+            TAG,
+            "uploadFiles: server:$server,username:$username,password:$password,senderName:$senderName,receiverName:$receiverName"
+        )
         try {
             validateCredentials(server, username, password)
             val filePath = getFilePath(selectedFileUri)
@@ -76,20 +77,38 @@ class SelectFiles(private val context: Context) {
                 "uploadFiles: encodeSenderName =${encodeSenderName}, encodeReceiverName =${encodeReceiverName} "
             )
             var remoteFilePath: Pair<String, String> =
-                createRemoteFilePath(filePath, fileType, fileExtension,encodeSenderName,encodeReceiverName)
+                createRemoteFilePath(
+                    filePath,
+                    fileType,
+                    fileExtension,
+                    encodeSenderName,
+                    encodeReceiverName
+                )
             if (isRemotePathModified) {
                 remoteFilePath =
-                    modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second,encodeSenderName?:senderName,encodeReceiverName?:receiverName)
+                    modifyRemotePath(
+                        remoteFilePath.first,
+                        fileType,
+                        remoteFilePath.second,
+                        encodeSenderName ?: senderName,
+                        encodeReceiverName ?: receiverName
+                    )
                 Log.d(TAG, "uploadFiles: RemotePathModified = ${remoteFilePath.first}")
             }
 
-            val newRemotePath = if (!hasValidExtension(remoteFilePath.first)) {
+            var newRemotePath = if (!hasValidExtension(remoteFilePath.first)) {
                 "${remoteFilePath.first}$fileExtension".trim()
             } else {
                 remoteFilePath.first.trim()
             }
-            if (newRemotePath.startsWith("image_")||newRemotePath.startsWith("audio_")|| newRemotePath.startsWith("rec_")||newRemotePath.startsWith("video_")||newRemotePath.startsWith("document_") || newRemotePath.startsWith("unknown_") || newRemotePath.startsWith("other_") ){
-                newRemotePath.replaceFirst("_","_${encodeSenderName}_${encodeReceiverName}_")
+            if (newRemotePath.startsWith("image_") || newRemotePath.startsWith("audio_") || newRemotePath.startsWith(
+                    "rec_"
+                ) || newRemotePath.startsWith("video_") || newRemotePath.startsWith("document_") || newRemotePath.startsWith(
+                    "unknown_"
+                ) || newRemotePath.startsWith("other_")
+            ) {
+                newRemotePath =
+                    newRemotePath.replaceFirst("_", "_${encodeSenderName}_${encodeReceiverName}_")
             }
             Log.d(
                 TAG,

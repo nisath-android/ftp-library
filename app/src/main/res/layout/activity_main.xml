@@ -29,7 +29,7 @@
             android:id="@+id/edtUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Admin"
+            android:text="Administrator"
             android:hint="Username"
             android:inputType="text"/>
 
