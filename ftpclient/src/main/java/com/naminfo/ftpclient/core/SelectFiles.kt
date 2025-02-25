@@ -45,10 +45,10 @@ class SelectFiles(private val context: Context) {
         server: String,
         username: String,
         password: String,
-        senderName:String,
-        receiverName:String,
+        senderName: String,
+        receiverName: String,
         selectedFileUri: Uri,
-        modifyRemotePath: (String, String, String) -> Pair<String, String>,
+        modifyRemotePath: (String, String, String, String, String) -> Pair<String, String>,
         isRemotePathModified: Boolean = false,
         getFilePath: (Uri) -> String?,
         ftpUtil: FTPUtil,
@@ -69,11 +69,17 @@ class SelectFiles(private val context: Context) {
                 TAG,
                 "uploadFiles: fileType =$fileType ,fileExtension =$fileExtension filePath =$filePath"
             )
+            val encodeSenderName = PhoneNumberHandler().encodePhoneNumber(senderName)
+            val encodeReceiverName = PhoneNumberHandler().encodePhoneNumber(receiverName)
+            Log.d(
+                TAG,
+                "uploadFiles: encodeSenderName =${encodeSenderName}, encodeReceiverName =${encodeReceiverName} "
+            )
             var remoteFilePath: Pair<String, String> =
-                createRemoteFilePath(filePath, fileType, fileExtension)
+                createRemoteFilePath(filePath, fileType, fileExtension,encodeSenderName,encodeReceiverName)
             if (isRemotePathModified) {
                 remoteFilePath =
-                    modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second)
+                    modifyRemotePath(remoteFilePath.first, fileType, remoteFilePath.second,encodeSenderName?:senderName,encodeReceiverName?:receiverName)
                 Log.d(TAG, "uploadFiles: RemotePathModified = ${remoteFilePath.first}")
             }
 
@@ -82,19 +88,23 @@ class SelectFiles(private val context: Context) {
             } else {
                 remoteFilePath.first.trim()
             }
+            if (newRemotePath.startsWith("image_")||newRemotePath.startsWith("audio_")|| newRemotePath.startsWith("rec_")||newRemotePath.startsWith("video_")||newRemotePath.startsWith("document_") || newRemotePath.startsWith("unknown_") || newRemotePath.startsWith("other_") ){
+                newRemotePath.replaceFirst("_","_${encodeSenderName}_${encodeReceiverName}_")
+            }
             Log.d(
                 TAG,
                 "uploadFiles:remoteFilePath =${newRemotePath}, remoteFilePath.first =${remoteFilePath.first} ext=${remoteFilePath.second} "
             )
 
+
             val uploaded = ftpUtil.uploadFile(
                 localFilePath = filePath,
-                remoteFilePath=newRemotePath,
+                remoteFilePath = newRemotePath,
                 sender = senderName,
                 receiver = receiverName,
-                fileType = getFileCategory(newRemotePath)?:fileType,
+                fileType = getFileCategory(newRemotePath) ?: fileType,
                 mimeType = "*/*"
-                )
+            )
 
 
             if (uploaded) {
@@ -170,10 +180,65 @@ class SelectFiles(private val context: Context) {
     }
 
     fun getFileCategory(filePath: String): String {
-        val imageExtensions = listOf(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico", ".heic", ".raw")
-        val audioExtensions = listOf(".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a", ".aiff", ".mid", ".midi", ".amr")
-        val videoExtensions = listOf(".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".3gp", ".vob")
-        val documentExtensions = listOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".html", ".htm", ".xml", ".epub", ".mobi")
+        val imageExtensions = listOf(
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".tiff",
+            ".webp",
+            ".svg",
+            ".ico",
+            ".heic",
+            ".raw"
+        )
+        val audioExtensions = listOf(
+            ".mp3",
+            ".wav",
+            ".aac",
+            ".flac",
+            ".ogg",
+            ".wma",
+            ".m4a",
+            ".aiff",
+            ".mid",
+            ".midi",
+            ".amr"
+        )
+        val videoExtensions = listOf(
+            ".mp4",
+            ".avi",
+            ".mkv",
+            ".mov",
+            ".wmv",
+            ".flv",
+            ".webm",
+            ".mpeg",
+            ".mpg",
+            ".3gp",
+            ".vob"
+        )
+        val documentExtensions = listOf(
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".txt",
+            ".rtf",
+            ".odt",
+            ".ods",
+            ".odp",
+            ".csv",
+            ".html",
+            ".htm",
+            ".xml",
+            ".epub",
+            ".mobi"
+        )
 
         val extension = filePath.substringAfterLast('.', "").lowercase()
 
@@ -185,8 +250,6 @@ class SelectFiles(private val context: Context) {
             else -> "Other"
         }
     }
-
-
 
 
     suspend fun downloadFileViaFtpURL(
@@ -230,14 +293,14 @@ class SelectFiles(private val context: Context) {
 
         ftpUtil.downloadFileFromFtpAndSave(
             context,
-            ftpHost= host,
-           ftpPort =  port,
-           username =  username,
-           password =  password,
+            ftpHost = host,
+            ftpPort = port,
+            username = username,
+            password = password,
             sender = sender,
             receiver = receiver,
-           remoteFilePath =  remoteFilePath,
-           fileName =  localFile.name,
+            remoteFilePath = remoteFilePath,
+            fileName = localFile.name,
             fileType = getFileCategory(remoteFilePath),
             "*/*"
         ) { status, _, uri, mimetype ->
@@ -260,7 +323,9 @@ class SelectFiles(private val context: Context) {
     fun createRemoteFilePath(
         filePath: String,
         fileType: String,
-        fileExtension: String
+        fileExtension: String,
+        encodeSenderName: String?,
+        encodeReceiverName: String?,
     ): Pair<String, String> {
         return if (filePath.contains(":")) {
             Log.d(
