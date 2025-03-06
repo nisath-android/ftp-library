@@ -109,6 +109,8 @@ class SelectFiles(private val context: Context) {
             ) {
                 newRemotePath =
                     newRemotePath.replaceFirst("_", "_${encodeSenderName}_${encodeReceiverName}_")
+            }else{
+                newRemotePath = "_${encodeSenderName}_${encodeReceiverName}_${remoteFilePath.first}"
             }
             Log.d(
                 TAG,
