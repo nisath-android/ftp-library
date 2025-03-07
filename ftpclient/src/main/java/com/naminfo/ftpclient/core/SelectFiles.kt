@@ -101,16 +101,16 @@ class SelectFiles(private val context: Context) {
             } else {
                 remoteFilePath.first.trim()
             }
-            if (newRemotePath.startsWith("image_") || newRemotePath.startsWith("audio_") || newRemotePath.startsWith(
+            newRemotePath = replaceMultipleDots(newRemotePath)
+            newRemotePath = if (newRemotePath.startsWith("image_") || newRemotePath.startsWith("audio_") || newRemotePath.startsWith(
                     "rec_"
                 ) || newRemotePath.startsWith("video_") || newRemotePath.startsWith("document_") || newRemotePath.startsWith(
                     "unknown_"
-                ) || newRemotePath.startsWith("other_")
+                ) || newRemotePath.startsWith("other_") || newRemotePath.startsWith("file_")
             ) {
-                newRemotePath =
-                    newRemotePath.replaceFirst("_", "_${encodeSenderName}_${encodeReceiverName}_")
-            }else{
-                newRemotePath = "_${encodeSenderName}_${encodeReceiverName}_${remoteFilePath.first}"
+                newRemotePath.replaceFirst("_", "_${encodeSenderName}_${encodeReceiverName}_")
+            } else {
+                "file_${encodeSenderName}_${encodeReceiverName}_${newRemotePath}"
             }
             Log.d(
                 TAG,
@@ -141,6 +141,9 @@ class SelectFiles(private val context: Context) {
         }
     }
 
+    fun replaceMultipleDots(input: String): String {
+        return input.replace(Regex("\\.{2,}"), ".")
+    }
 
     // Function to check if a file has a valid extension
     fun hasValidExtension(filePath: String): Boolean {
